@@ -1,0 +1,1 @@
+A robust, secure, and feature-rich authentication built with ExpressJS, PrismaORM, and PostgreSQL. This service provides comprehensive authentication capabilities for modern web, mobile applications.
