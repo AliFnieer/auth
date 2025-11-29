@@ -1,18 +1,32 @@
 {
   "name": "auth",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Professional authentication system with Express.js, Prisma, and PostgreSQL",
+  "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "nodemon server.js",
+    "start": "node server.js",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "db:migrate": "prisma migrate dev",
+    "db:reset": "prisma migrate reset"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "authentication",
+    "express",
+    "prisma",
+    "postgresql",
+    "jwt",
+    "security",
+    "nodemailer"
+  ],
+  "author": "Eng.AliFnier",
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@prisma/client": "^6.19.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
