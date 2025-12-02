@@ -1,7 +1,18 @@
 import validator from 'validator'
+import { sanitizeInput } from '../utils/validation.js'
 
 export const validateRegister = (req, res, next) => {
-  const { email, password, firstName, lastName } = req.body
+  let { email, password, firstName, lastName } = req.body
+
+  // sanitize inputs (avoid sanitizing password)
+  if (email) email = sanitizeInput(email)
+  if (firstName) firstName = sanitizeInput(firstName)
+  if (lastName) lastName = sanitizeInput(lastName)
+
+  // write sanitized values back to body
+  req.body.email = email
+  req.body.firstName = firstName
+  req.body.lastName = lastName
 
   // Validate email
   if (!email || !validator.isEmail(email)) {
@@ -38,7 +49,10 @@ export const validateRegister = (req, res, next) => {
 }
 
 export const validateLogin = (req, res, next) => {
-  const { email, password } = req.body
+  let { email, password } = req.body
+
+  if (email) email = sanitizeInput(email)
+  req.body.email = email
 
   if (!email || !password) {
     return res.status(400).json({
@@ -71,7 +85,15 @@ export const validatePasswordReset = (req, res, next) => {
 }
 
 export const validateUpdateProfile = (req, res, next) => {
-  const { firstName, lastName, phone } = req.body
+  let { firstName, lastName, phone } = req.body
+
+  if (firstName) firstName = sanitizeInput(firstName)
+  if (lastName) lastName = sanitizeInput(lastName)
+  if (phone) phone = sanitizeInput(phone)
+
+  req.body.firstName = firstName
+  req.body.lastName = lastName
+  req.body.phone = phone
 
   if (firstName && firstName.length > 50) {
     return res.status(400).json({

@@ -1,13 +1,23 @@
 import prisma from '../lib/prisma.js'
 import bcrypt from 'bcryptjs'
+import { sanitizeInput } from '../utils/validation.js'
 
 export class UserModel {
   static async create(userData) {
-    const hashedPassword = await bcrypt.hash(userData.password, 12)
+    // sanitize fields except password
+    const clean = {
+      ...userData,
+      email: userData.email ? sanitizeInput(userData.email) : userData.email,
+      firstName: userData.firstName ? sanitizeInput(userData.firstName) : userData.firstName,
+      lastName: userData.lastName ? sanitizeInput(userData.lastName) : userData.lastName,
+      phone: userData.phone ? sanitizeInput(userData.phone) : userData.phone
+    }
+
+    const hashedPassword = await bcrypt.hash(clean.password, 12)
     
     return await prisma.user.create({
       data: {
-        ...userData,
+        ...clean,
         password: hashedPassword
       },
       select: {
@@ -46,9 +56,17 @@ export class UserModel {
   }
 
   static async update(id, data) {
+    // sanitize update fields
+    const clean = {
+      ...(data.firstName ? { firstName: sanitizeInput(data.firstName) } : {}),
+      ...(data.lastName ? { lastName: sanitizeInput(data.lastName) } : {}),
+      ...(data.phone ? { phone: sanitizeInput(data.phone) } : {}),
+      ...data
+    }
+
     return await prisma.user.update({
       where: { id },
-      data,
+      data: clean,
       select: {
         id: true,
         email: true,

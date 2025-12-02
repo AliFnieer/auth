@@ -1,12 +1,19 @@
 import jwt from 'jsonwebtoken'
+import bcrypt from 'bcryptjs'
 import { UserModel } from '../models/user.model.js'
 import { TokenModel } from '../models/token.model.js'
 import { AuditLogModel } from '../models/audit.model.js'
+import { EmailService } from '../utils/emailService.js'
 
 export class AuthController {
   static generateAccessToken(userId) {
-    return jwt.sign({ userId }, process.env.JWT_SECRET, { 
-      expiresIn: process.env.JWT_EXPIRES_IN || '15m' 
+    return jwt.sign({
+      userId,
+      type: 'access'
+    }, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRES_IN || '15m',
+      issuer: 'auth',
+      subject: userId.toString()
     })
   }
 
@@ -35,8 +42,13 @@ export class AuthController {
       // Generate verification token
       const verificationToken = await TokenModel.createVerificationToken(user.id)
 
-      // TODO: Send verification email
-      // await EmailService.sendVerificationEmail(user.email, verificationToken.token)
+      // Send verification email
+      try {
+        await EmailService.sendVerificationEmail(user.email, verificationToken.token)
+      } catch (err) {
+        // Log but don't block registration
+        logger.error('Failed to send verification email', err)
+      }
 
       // Create audit log
       await AuditLogModel.create({
@@ -105,10 +117,21 @@ export class AuthController {
       // Generate tokens
       const accessToken = this.generateAccessToken(user.id)
       const refreshToken = await TokenModel.createRefreshToken(
-        user.id, 
-        req.get('User-Agent'), 
+        user.id,
+        req.get('User-Agent'),
         req.ip
       )
+
+      // Set refresh token as HttpOnly, Secure cookie
+      const cookieOptions = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        path: '/api'
+      }
+
+      res.cookie('refreshToken', refreshToken.token, cookieOptions)
 
       // Update last login
       await UserModel.update(user.id, { lastLoginAt: new Date() })
@@ -136,7 +159,6 @@ export class AuthController {
           },
           tokens: {
             accessToken,
-            refreshToken: refreshToken.token,
             expiresIn: process.env.JWT_EXPIRES_IN || '15m'
           }
         }
@@ -153,30 +175,72 @@ export class AuthController {
 
   static async refreshToken(req, res) {
     try {
-      const { refreshToken } = req.body
+      // Accept token from cookie (preferred) or body (fallback)
+      const incomingToken = req.cookies?.refreshToken || req.body.refreshToken
 
-      if (!refreshToken) {
+      if (!incomingToken) {
         return res.status(400).json({
           success: false,
           message: 'Refresh token is required'
         })
       }
 
-      const tokenData = await TokenModel.findRefreshToken(refreshToken)
-      if (!tokenData) {
+      // Fetch token record regardless of revoked/expired state to detect reuse
+      const tokenRecord = await TokenModel.findRefreshTokenByToken(incomingToken)
+      if (!tokenRecord) {
+        // token not found
+        res.clearCookie('refreshToken')
         return res.status(401).json({
           success: false,
           message: 'Invalid or expired refresh token'
         })
       }
 
-      const accessToken = this.generateAccessToken(tokenData.userId)
+      // If token was revoked => possible reuse — revoke all user tokens
+      if (tokenRecord.isRevoked) {
+        await TokenModel.revokeAllUserTokens(tokenRecord.userId)
+        res.clearCookie('refreshToken')
+        return res.status(401).json({
+          success: false,
+          message: 'Refresh token reuse detected. All sessions revoked.'
+        })
+      }
+
+      // Check expiry
+      if (new Date(tokenRecord.expiresAt) <= new Date()) {
+        res.clearCookie('refreshToken')
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid or expired refresh token'
+        })
+      }
+
+      // Valid token — rotate: issue new refresh token and revoke old one
+      const accessToken = this.generateAccessToken(tokenRecord.userId)
+
+      const newRefresh = await TokenModel.createRefreshToken(
+        tokenRecord.userId,
+        req.get('User-Agent'),
+        req.ip
+      )
+
+      // Revoke the old token
+      await TokenModel.revokeRefreshToken(incomingToken)
+
+      const cookieOptions = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        path: '/api'
+      }
+
+      res.cookie('refreshToken', newRefresh.token, cookieOptions)
 
       res.json({
         success: true,
         data: {
-          accessToken,
-          refreshToken: tokenData.token
+          accessToken
         }
       })
 
@@ -191,12 +255,15 @@ export class AuthController {
 
   static async logout(req, res) {
     try {
-      const { refreshToken } = req.body
+      const incomingToken = req.cookies?.refreshToken || req.body.refreshToken
       const userId = req.user.id
 
-      if (refreshToken) {
-        await TokenModel.revokeRefreshToken(refreshToken)
+      if (incomingToken) {
+        await TokenModel.revokeRefreshToken(incomingToken)
       }
+
+      // Clear refresh token cookie
+      res.clearCookie('refreshToken', { path: '/api' })
 
       // Create audit log
       await AuditLogModel.create({
@@ -277,8 +344,12 @@ export class AuthController {
 
       const resetToken = await TokenModel.createPasswordResetToken(user.id)
 
-      // TODO: Send password reset email
-      // await EmailService.sendPasswordResetEmail(user.email, resetToken.token)
+      // Send password reset email
+      try {
+        await EmailService.sendPasswordResetEmail(user.email, resetToken.token)
+      } catch (err) {
+        logger.error('Failed to send password reset email', err)
+      }
 
       // Create audit log
       await AuditLogModel.create({
@@ -348,3 +419,5 @@ export class AuthController {
     }
   }
 }
+
+export default AuthController

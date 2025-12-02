@@ -32,6 +32,14 @@ export class TokenModel {
     })
   }
 
+  // Find a refresh token record regardless of revoked/expired state
+  static async findRefreshTokenByToken(token) {
+    return await prisma.refreshToken.findUnique({
+      where: { token },
+      include: { user: true }
+    })
+  }
+
   static async revokeRefreshToken(token) {
     return await prisma.refreshToken.updateMany({
       where: { token },

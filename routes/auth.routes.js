@@ -25,7 +25,7 @@ const authLimiter = rateLimit({
 // Public routes
 router.post('/register', authLimiter, validateRegister, AuthController.register)
 router.post('/login', authLimiter, validateLogin, AuthController.login)
-router.post('/refresh-token', AuthController.refreshToken)
+router.post('/refresh-token', authLimiter, AuthController.refreshToken)
 router.post('/verify-email/:token', AuthController.verifyEmail)
 router.post('/forgot-password', authLimiter, AuthController.requestPasswordReset)
 router.post('/reset-password', authLimiter, validatePasswordReset, AuthController.resetPassword)
