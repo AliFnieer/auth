@@ -1,7 +1,7 @@
 import { UserModel } from '../models/user.model.js'
 import { AuditLogModel } from '../models/audit.model.js'
 import { TokenModel } from '../models/token.model.js'
-import bcrypt from 'bcryptjs'
+import * as bcrypt from 'bcryptjs'
 
 export class UserController {
   static async getProfile(req, res) {

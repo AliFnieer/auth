@@ -1,5 +1,5 @@
 import prisma from '../lib/prisma.js'
-import bcrypt from 'bcryptjs'
+import * as bcrypt from 'bcryptjs'
 import { sanitizeInput } from '../utils/validation.js'
 
 export class UserModel {
@@ -56,12 +56,12 @@ export class UserModel {
   }
 
   static async update(id, data) {
-    // sanitize update fields
+    // sanitize update fields and ensure sanitized values take precedence
     const clean = {
+      ...data,
       ...(data.firstName ? { firstName: sanitizeInput(data.firstName) } : {}),
       ...(data.lastName ? { lastName: sanitizeInput(data.lastName) } : {}),
-      ...(data.phone ? { phone: sanitizeInput(data.phone) } : {}),
-      ...data
+      ...(data.phone ? { phone: sanitizeInput(data.phone) } : {})
     }
 
     return await prisma.user.update({

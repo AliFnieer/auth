@@ -1,9 +1,10 @@
-import jwt from 'jsonwebtoken'
-import bcrypt from 'bcryptjs'
+import * as jwt from 'jsonwebtoken'
+import * as bcrypt from 'bcryptjs'
 import { UserModel } from '../models/user.model.js'
 import { TokenModel } from '../models/token.model.js'
 import { AuditLogModel } from '../models/audit.model.js'
 import { EmailService } from '../utils/emailService.js'
+import { logger } from '../utils/logger.js'
 
 export class AuthController {
   static generateAccessToken(userId) {

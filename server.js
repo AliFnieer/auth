@@ -88,12 +88,16 @@ app.use(errorHandler)
 
 const PORT = process.env.PORT || 3000
 
-app.listen(PORT, () => {
-  console.log(`🚀 Auth system server running on port ${PORT}`)
-  console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`)
-  console.log(`📊 Database: ${process.env.DATABASE_URL ? 'Configured' : 'Not configured'}`)
-
-  prisma.$connect()
-    .then(() => console.log('✅ Database connected successfully'))
-    .catch((e) => console.error('❌ Database connection error:', e))
-})
+prisma.$connect()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`🚀 Auth system server running on port ${PORT}`)
+      console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`)
+      console.log(`📊 Database: ${process.env.DATABASE_URL ? 'Configured' : 'Not configured'}`)
+      console.log('✅ Database connected successfully')
+    })
+  })
+  .catch((e) => {
+    console.error('❌ Database connection error:', e)
+    process.exit(1)
+  })

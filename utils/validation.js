@@ -1,11 +1,11 @@
-import validator from 'validator'
+import * as validator from 'validator'
 
 export const isValidEmail = (email) => {
   return validator.isEmail(email)
 }
 
 export const isValidPassword = (password) => {
-  return password && password.length >= 6
+  return !!password && password.length >= 6
 }
 
 export const sanitizeInput = (input) => {

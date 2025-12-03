@@ -4,7 +4,7 @@
   "description": "Professional authentication system with Express.js, Prisma, and PostgreSQL",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --detectOpenHandles",
     "dev": "nodemon server.js",
     "start": "node server.js",
     "db:generate": "prisma generate",
@@ -40,7 +40,15 @@
     "validator": "^13.15.23"
   },
   "devDependencies": {
+    "@faker-js/faker": "^10.1.0",
+    "chai": "^6.2.1",
+    "jest": "^30.2.0",
+    "jest-html-reporter": "^4.3.0",
+    "jest-mock-extended": "^4.0.0",
+    "mocha": "^11.7.5",
     "nodemon": "^3.1.11",
-    "prisma": "^6.19.0"
+    "prisma": "^6.19.0",
+    "sinon": "^21.0.0",
+    "supertest": "^7.1.4"
   }
 }

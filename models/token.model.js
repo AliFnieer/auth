@@ -1,5 +1,5 @@
 import prisma from '../lib/prisma.js'
-import crypto from 'crypto'
+import * as crypto from 'crypto'
 
 export class TokenModel {
   static generateToken() {
